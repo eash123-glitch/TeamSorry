@@ -168,3 +168,57 @@ class BufferList(nn.Module):
     
     def __iter__(self):
         return iter(self._buffers.values())
+    
+
+class PointGenerator(nn.Module):
+
+    """
+    Generate points according to feature map sizes
+    """
+
+    def __init__(
+            self,
+            max_seq_len,
+            fpn_strides,
+            regression_range,
+            use_offset = False
+    ):
+        super().__init__()
+
+        fpn_levels = len(fpn_strides)
+        assert len(regression_range) == fpn_levels
+
+        self.max_seq_len = max_seq_len
+        self.fpn_strides = fpn_strides
+        self.regression_range = regression_range
+        self.use_offset = use_offset
+        self.fpn_levels = fpn_levels
+        self.buffer_points = self.generate_points()
+
+    def generate_points(self):
+        
+        points_list =[]
+        for l, stride in enumerate(self.fpn_strides):
+            reg_range = torch.as_tensor(self.regression_range[l], dtype = torch.float32)
+            fpn_stride = torch.as_tensor(stride, dtype = torch.float32)
+            points = torch.arange(0, self.max_seq_len, stride)[:, None]
+
+            if self.use_offset:
+                points += stride // 2
+
+            req_range = req_range[None].repeat(points.shape[0], 1)
+            fpn_stride = fpn_stride.repeat(points.shape[0], 1)
+            points_list.append(torch.cat([points, req_range, fpn_stride], dim =1))
+
+        return BufferList(points_list)
+    
+    def forward(self, features):
+
+        assert len(features) == self.fpn_levels
+        points_list = []
+        feat_lens = [f.shape[-1] for f in features]
+        for feat_len, buffer_points in zip(feat_lens, self.buffer_points):
+            assert feat_len <= buffer_points.shape[0]
+            points = buffer_points[:feat_len, :]
+            points_list.append(points)
+        return points_list
