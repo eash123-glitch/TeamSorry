@@ -17,6 +17,10 @@ Our system jointly handles:
 3. **VLG (Video–Language Grounding)** — Temporal localization of question-relevant video segments
 
 ---
+## Video Features
+
+The precomputed video features of the Edo4D dataset can be found at https://ego4d-data.org/docs/data/features/  and can be accessed throught their commandline interface, the model training expects that the features be in an .hdf5 file and be placed in the data directory.
+ 
 
 ## 📂 Repository Structure
 ```
